@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading Practice Pro - Custom Speed</title>
+    <style>
+        body, html { 
+            height: 100%; 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+        }
+
+        body { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: flex-start; 
+            padding-top: 2vh;
+        }
+
+        h2 { margin: 10px 0; color: #2c3e50; font-size: 1.4rem; }
+
+        #text-container { 
+            font-size: clamp(18px, 3.5vh, 24px); 
+            line-height: 2; 
+            max-width: 850px; 
+            width: 92%;
+            text-align: left; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+            margin-bottom: 15px;
+            min-height: 40vh;
+            max-height: 55vh; 
+            overflow-y: auto; 
+        }
+
+        .word { 
+            color: #444; 
+            margin: 0 3px; 
+            display: inline-block; 
+            transition: color 0.1s ease;
+            position: relative;
+        }
+
+        .highlight { 
+            color: #d63031 !important; 
+            font-weight: 600; 
+            text-shadow: 0px 0px 1px rgba(214, 48, 49, 0.2);
+        }
+
+        .highlight::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: #d63031;
+        }
+
+        .controls { 
+            background: #fff; 
+            padding: 20px 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+            width: 400px;
+        }
+
+        .input-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .input-group { display: flex; align-items: center; gap: 5px; font-size: 14px; font-weight: bold; }
+        input[type="number"] { width: 50px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; text-align: center; }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 5px; }
+        button { flex: 1; padding: 12px; font-size: 16px; cursor: pointer; border: none; border-radius: 8px; font-weight: bold; }
+        #startBtn { background-color: #2ecc71; color: white; }
+        #stopBtn { background-color: #fab1a0; color: #d63031; }
+        
+        .status-box { font-size: 14px; background: #f8f9fa; padding: 8px; border-radius: 5px; text-align: center; border: 1px solid #eee; }
+        #current-wpm { font-weight: bold; color: #d63031; }
+    </style>
+</head>
+<body>
+
+    <h2>5th Grade Speed Trainer</h2>
+
+    <div id="text-container"></div>
+
+    <div class="controls">
+        <div class="input-row">
+            <label style="font-size: 14px; font-weight: bold;">Passage:</label>
+            <select id="passageSelect" onchange="stopReading(); loadPassage();" style="padding: 5px; width: 220px;">
+                <option value="0">The Hidden Garden</option>
+                <option value="1">The Space Station</option>
+                <option value="2">The Deep Blue</option>
+                <option value="3">The Mountain Hike</option>
+                <option value="4">The Library Ghost</option>
+            </select>
+        </div>
+
+        <div class="input-row">
+            <div class="input-group">
+                <span>Min WPM:</span>
+                <input type="number" id="minWPM" value="120" min="40" max="300">
+            </div>
+            <div class="input-group">
+                <span>Max WPM:</span>
+                <input type="number" id="maxWPM" value="160" min="40" max="400">
+            </div>
+        </div>
+
+        <div class="status-box">
+            Current Speed: <span id="current-wpm">---</span> WPM
+        </div>
+
+        <div class="btn-group">
+            <button id="startBtn" onclick="startReading()">Start</button>
+            <button id="stopBtn" onclick="stopReading()">Stop / Reset</button>
+        </div>
+    </div>
+
+    <script>
+        const passages = [
+            "The old iron gate creaked as Maya pushed it open. Behind the tall stone walls sat a garden that time had forgotten. Giant sunflowers leaned against the fence like tired soldiers, while purple vines climbed up the oak trees. In the center of the yard, a small stone fountain sat dry and silent. Maya reached into her pocket and pulled out a small packet of seeds. She knew that with a little water and a lot of love, this sleepy place would soon wake up and bloom again.",
+            "Leo looked out the thick glass window of the space station. Below him, the Earth looked like a glowing blue marble swirling with white clouds. There were no borders or lines, just vast oceans and dark green forests. He floated over to the control panel to check the oxygen levels. Life in space was quiet, but he loved the way the stars never flickered. Out here, the universe felt like a giant, sparkling mystery waiting to be solved.",
+            "Deep beneath the ocean waves, a school of silver fish darted through the coral reef. A large sea turtle drifted slowly by, looking for a snack of crunchy seagrass. The water was cool and dim, but beams of sunlight reached down from the surface like long golden fingers. Hidden in a dark cave, a small octopus changed its color to match the rocks. In this underwater world, every creature had a secret way to hide and a special place to call home.",
+            "The air grew thin and cold as Sarah climbed higher up the rocky trail. Her boots crunched on the gravel, and her breath turned into tiny puffs of steam. She stopped for a moment to look back at the valley far below. The town looked like a collection of toy houses nestled in the grass. High above, a golden eagle soared in wide circles against the bright blue sky. Sarah took a deep breath and kept moving, eager to reach the snowy peak before sunset.",
+            "Thomas always thought the town library was a little bit spooky after dark. The tall wooden shelves cast long shadows that looked like reaching arms. One evening, he heard a soft rustling sound coming from the history section. He crept closer and saw a book floating gently in the air. It wasn't a ghost, but a tiny owl that had flown in through an open window. The bird blinked its yellow eyes at him, landed on a dictionary, and let out a quiet, friendly hoot."
+        ];
+
+        const container = document.getElementById('text-container');
+        const passageSelect = document.getElementById('passageSelect');
+        const wpmDisplay = document.getElementById('current-wpm');
+        const minInput = document.getElementById('minWPM');
+        const maxInput = document.getElementById('maxWPM');
+        
+        let isReading = false;
+        let readingTimeout;
+
+        function loadPassage() {
+            const index = passageSelect.value;
+            const words = passages[index].split(' ');
+            container.innerHTML = words.map(word => `<span class="word">${word}</span>`).join('');
+            wpmDisplay.innerText = "---";
+        }
+
+        function stopReading() {
+            isReading = false;
+            clearTimeout(readingTimeout);
+            loadPassage(); 
+        }
+
+        async function startReading() {
+            if (isReading) return;
+            
+            // Get user-defined speeds
+            let minWPM = parseInt(minInput.value) || 120;
+            let maxWPM = parseInt(maxInput.value) || 160;
+            
+            // Safety: Ensure min isn't higher than max
+            if (minWPM > maxWPM) {
+                let temp = minWPM;
+                minWPM = maxWPM;
+                maxWPM = temp;
+                minInput.value = minWPM;
+                maxInput.value = maxWPM;
+            }
+
+            isReading = true;
+            const wordSpans = document.querySelectorAll('.word');
+            wordSpans.forEach(span => span.classList.remove('highlight'));
+            
+            let currentWordIndex = 0;
+
+            while (currentWordIndex < wordSpans.length && isReading) {
+                // Generate random speed within USER boundaries
+                const chunkWPM = Math.floor(Math.random() * (maxWPM - minWPM + 1)) + minWPM;
+                wpmDisplay.innerText = chunkWPM;
+                const chunkSize = Math.floor(Math.random() * (5 - 3 + 1)) + 3;
+
+                for (let i = 0; i < chunkSize; i++) {
+                    if (currentWordIndex >= wordSpans.length || !isReading) break;
+
+                    const span = wordSpans[currentWordIndex];
+                    let delay = (60 / chunkWPM) * 1000;
+
+                    const text = span.innerText;
+                    if (text.endsWith('.') || text.endsWith('!') || text.endsWith('?')) {
+                        delay += 1000;
+                    } else if (text.endsWith(',')) {
+                        delay += 500;
+                    }
+
+                    span.classList.add('highlight');
+                    if (currentWordIndex > 0) wordSpans[currentWordIndex - 1].classList.remove('highlight');
+                    
+                    await new Promise(resolve => {
+                        readingTimeout = setTimeout(resolve, delay);
+                    });
+
+                    currentWordIndex++;
+                }
+            }
+            
+            if (wordSpans.length > 0) {
+                wordSpans[wordSpans.length - 1].classList.remove('highlight');
+            }
+            
+            if (isReading) wpmDisplay.innerText = "Done!";
+            isReading = false;
+        }
+
+        loadPassage();
+    </script>
+</body>
+</html>
