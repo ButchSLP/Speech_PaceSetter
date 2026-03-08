@@ -47,10 +47,13 @@
             position: relative;
         }
 
+        /* Updated Highlight Styles */
         .highlight { 
             color: #d63031 !important; 
-            font-weight: 600; 
-            text-shadow: 0px 0px 1px rgba(214, 48, 49, 0.2);
+            /* Remove font-weight: 600; This was causing the jump */
+            
+            /* This creates a "bold" look without changing the word's width */
+            text-shadow: 0.5px 0 0 #d63031, -0.1px 0 0 #d63031;
         }
 
         .highlight::after {
